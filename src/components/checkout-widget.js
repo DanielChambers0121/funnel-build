@@ -22,22 +22,15 @@ class CustomCheckoutWidget extends HTMLElement {
         // Render initial structure
         this.render();
 
-        console.log("Widget connected. Initializing mock checkout...");
+        console.log("Widget connected. Initializing Stripe checkout...");
 
-        // --- MOCK MODE FOR LOCAL DEMONSTRATION ---
-        // Bypass the real Stripe.js script loader to prevent adblockers (like Brave Shields)
-        // from silently blocking it and halting execution.
-        this.initializeCheckout();
-
-        /*
-        // Load Stripe.js if it's not already on the page
+        // Load Stripe.js then initialize checkout
         this.loadStripeScript().then(() => {
             this.initializeCheckout();
         }).catch(err => {
             this.showError('Failed to load payment system. Please try again later.');
             console.error(err);
         });
-        */
     }
 
     async loadStripeScript() {
@@ -55,9 +48,7 @@ class CustomCheckoutWidget extends HTMLElement {
     async initializeCheckout() {
         const publishableKey = this.getAttribute('stripe-key');
         const backendUrl = this.getAttribute('backend-url');
-
-        // Example dynamic attributes you'd pass from your funnel
-        const amount = parseInt(this.getAttribute('amount') || '5000', 10); // Default 50.00 GBP
+        const amount = parseInt(this.getAttribute('amount') || '5000', 10);
         const customerEmail = this.getAttribute('customer-email') || '';
         const customerName = this.getAttribute('customer-name') || '';
 
@@ -67,14 +58,10 @@ class CustomCheckoutWidget extends HTMLElement {
         }
 
         try {
-            // --- MOCK MODE FOR LOCAL DEMONSTRATION ---
-            // In production with real keys, uncomment the initialization below
-            /*
             // 1. Initialize Stripe
             this.stripe = window.Stripe(publishableKey);
-            */
 
-            // 2. Fetch the PaymentIntent client secret from the backend
+            // 2. Fetch the PaymentIntent client secret from the Netlify serverless function
             const response = await fetch(`${backendUrl}/create-payment-intent`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -82,7 +69,7 @@ class CustomCheckoutWidget extends HTMLElement {
                     order: {
                         items: [{ id: 'core_product' }],
                         price: amount,
-                        currency: 'gbp' // Base currency fixed to GBP
+                        currency: 'gbp'
                     },
                     customer: {
                         name: customerName,
@@ -97,82 +84,28 @@ class CustomCheckoutWidget extends HTMLElement {
 
             const data = await response.json();
 
-            console.log('Payment Intent Response:', response.ok, response.status, data);
-
             if (!response.ok || !data.clientSecret) {
-                console.error('Failed condition:', { ok: response.ok, hasSecret: !!data.clientSecret, data });
                 throw new Error(data.error || 'Failed to initialize payment.');
             }
 
             this.clientSecret = data.clientSecret;
 
-            // --- MOCK MODE FOR LOCAL DEMONSTRATION ---
-            // If we are using a dummy client secret, Stripe will throw an error during initialization.
-            // In a real environment with valid keys, uncomment the code below to use Stripe Elements.
-
-            /*
             // 3. Initialize Stripe Elements
             const appearance = {
                 theme: 'stripe',
                 variables: {
-                    // We map these to our CSS variables if we want global synchronization
-                    colorPrimary: getComputedStyle(this).getPropertyValue('--checkout-primary-color').trim() || '#2563eb',
-                    fontFamily: getComputedStyle(this).getPropertyValue('--checkout-font').trim() || 'system-ui, sans-serif',
+                    colorPrimary: '#2563eb',
+                    fontFamily: 'system-ui, sans-serif',
                 }
             };
 
             this.elements = this.stripe.elements({ clientSecret: this.clientSecret, appearance });
-            const paymentElement = this.elements.create('payment', {
-                layout: 'tabs'
-            });
+            const paymentElement = this.elements.create('payment', { layout: 'tabs' });
 
-            // 4. Mount the Payment Element
+            // 4. Mount the Payment Element into the shadow DOM container
             const paymentContainer = this.shadowRoot.getElementById('payment-element');
-            // Clear loading skeleton
             paymentContainer.innerHTML = '';
             paymentElement.mount(paymentContainer);
-            */
-
-            // --- MOCK ELEMENT FOR DEMONSTRATION ---
-            const paymentContainer = this.shadowRoot.getElementById('payment-element');
-            // Clear loading skeleton
-            paymentContainer.innerHTML = '';
-
-            const mockWrapper = document.createElement('div');
-            mockWrapper.style.cssText = "width: 100%; border: 1px solid #e5e7eb; padding: 16px; border-radius: 6px; background: #fafafa; display: flex; flex-direction: column; gap: 12px; font-family: system-ui, sans-serif;";
-
-            const title = document.createElement('div');
-            title.style.cssText = "font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 4px;";
-            title.textContent = "Mock Card Details";
-
-            const cardNumber = document.createElement('input');
-            cardNumber.type = "text";
-            cardNumber.placeholder = "Card number";
-            cardNumber.style.cssText = "width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; box-sizing: border-box;";
-            cardNumber.value = "4242 4242 4242 4242";
-
-            const row = document.createElement('div');
-            row.style.cssText = "display: flex; gap: 12px;";
-
-            const expiry = document.createElement('input');
-            expiry.type = "text";
-            expiry.placeholder = "MM/YY";
-            expiry.style.cssText = "width: 50%; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; box-sizing: border-box;";
-            expiry.value = "12/26";
-
-            const cvc = document.createElement('input');
-            cvc.type = "text";
-            cvc.placeholder = "CVC";
-            cvc.style.cssText = "width: 50%; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; box-sizing: border-box;";
-            cvc.value = "123";
-
-            row.appendChild(expiry);
-            row.appendChild(cvc);
-            mockWrapper.appendChild(title);
-            mockWrapper.appendChild(cardNumber);
-            mockWrapper.appendChild(row);
-
-            paymentContainer.appendChild(mockWrapper);
 
             // Setup form submission
             this.setupFormListeners();
@@ -188,26 +121,15 @@ class CustomCheckoutWidget extends HTMLElement {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            if (!this.stripe || !this.elements) return;
             this.setLoading(true);
 
-            // --- MOCK PAYMENT CONFIRMATION ---
-            // In a real integration, uncomment the confirmPayment block below
-            /*
-            if (!this.stripe || !this.elements) return;
-            // Confirm the payment
+            // Confirm the payment using Stripe Elements
             const { error } = await this.stripe.confirmPayment({
                 elements: this.elements,
-                // By specifying redirect: 'if_required', we keep the user on the same page
-                // for standard card payments. (Some payment methods may still require redirect)
+                // redirect: 'if_required' keeps the user on the same page for card payments
                 redirect: 'if_required',
             });
-            */
-
-            // Simulate network delay for demo
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Mock success response
-            const error = null;
 
             if (error) {
                 // Show inline error (e.g., card declined, insufficient funds)

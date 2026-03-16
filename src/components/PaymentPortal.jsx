@@ -179,7 +179,7 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
                     ) : (
                         <custom-checkout-widget
                             ref={widgetRef}
-                            backend-url="http://127.0.0.1:3000"
+                            backend-url="/.netlify/functions"
                             stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_YOUR_STRIPE_PUBLIC_KEY_HERE'}
                             amount={selectedTier.price * 100}
                             customer-name={customerData.name}
