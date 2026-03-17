@@ -123,20 +123,14 @@ class CustomCheckoutWidget extends HTMLElement {
                 this.showError(userMessage);
             });
 
-            paymentElement.on('ready', () => {
-                console.log('Stripe Element Ready');
-                this.shadowRoot.getElementById('payment-element').style.minHeight = 'auto';
-            });
-
-            paymentElement.on('loaderror', (event) => {
-                console.error('Stripe Load Error:', event.error);
-                this.showError('Failed to load payment fields. Check your Stripe Dashboard settings.');
-            });
-
             // Setup form submission
             this.setupFormListeners();
-        const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
-        termsCheckbox.addEventListener('change', () => this.updateSubmitButtonState());
+            
+            // Setup Terms Checkbox Listener
+            const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
+            if (termsCheckbox) {
+                termsCheckbox.addEventListener('change', () => this.updateSubmitButtonState());
+            }
 
             // Initial button state check
             this.updateSubmitButtonState();
@@ -153,7 +147,7 @@ class CustomCheckoutWidget extends HTMLElement {
             e.preventDefault();
 
             const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
-            if (!this.stripe || !this.elements || !termsCheckbox.checked) return;
+            if (!this.stripe || !this.elements || (termsCheckbox && !termsCheckbox.checked)) return;
             this.setLoading(true);
 
             // Confirm the payment using Stripe Elements
@@ -199,12 +193,11 @@ class CustomCheckoutWidget extends HTMLElement {
         // 1. We're not currently loading/processing
         // 2. Stripe Elements are initialized (this.elements is not null)
         // 3. The terms checkbox is checked
-        const isReady = !this.isLoading && this.elements !== null && termsCheckbox.checked;
+        const isReady = !this.isLoading && this.elements !== null && (termsCheckbox ? termsCheckbox.checked : true);
         
         if (submitBtn) {
             submitBtn.disabled = !isReady;
         }
-    }
     }
 
     showError(message) {
@@ -373,6 +366,7 @@ class CustomCheckoutWidget extends HTMLElement {
                     margin-top: 16px;
                 }
 
+                /* Terms Checkbox Styles */
                 .terms-container {
                     display: flex;
                     align-items: flex-start;
@@ -431,7 +425,7 @@ class CustomCheckoutWidget extends HTMLElement {
                 </form>
 
                 <div id="success-message">
-                    <div class="success-icon">✓</div>
+                    <div class="success-icon">?</div>
                     <h3>Payment Successful!</h3>
                     <p>Thank you for your purchase. Your order has been confirmed.</p>
                 </div>
@@ -442,5 +436,3 @@ class CustomCheckoutWidget extends HTMLElement {
 
 // Register the custom element
 customElements.define('custom-checkout-widget', CustomCheckoutWidget);
-
-
