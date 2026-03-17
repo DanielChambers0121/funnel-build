@@ -9,6 +9,8 @@ import PaymentPortal from './components/PaymentPortal';
 function App() {
   const [funnelStep, setFunnelStep] = useState('HERO'); // HERO, QUIZ, RESULTS, PAYMENT, THANK_YOU
   const [quizAnswers, setQuizAnswers] = useState(null);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+  const [termsChecked, setTermsChecked] = useState(false);
 
   const startQuiz = () => {
     setFunnelStep('QUIZ');
@@ -41,6 +43,48 @@ function App() {
           </a>
         </div>
       </nav>
+
+      {!hasAcceptedTerms && (
+        <div className="terms-overlay">
+          <div className="terms-modal glass-panel">
+            <h2>Service Terms &amp; Conditions</h2>
+            <p className="terms-updated">Last updated: March 17, 2026</p>
+            <div className="terms-content">
+              <p>
+                Please review our{' '}
+                <a
+                  href="/terms-and-conditions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  full Service Terms &amp; Conditions
+                </a>
+                . By continuing, you acknowledge that you have had the opportunity to read this document.
+              </p>
+            </div>
+
+            <div className="terms-actions">
+              <label className="terms-checkbox">
+                <input
+                  type="checkbox"
+                  checked={termsChecked}
+                  onChange={(e) => setTermsChecked(e.target.checked)}
+                />
+                <span>
+                  I understand and agree to the Service Terms &amp; Conditions, including that all sales are final and that no specific business results are guaranteed, whether or not I open or read the full document.
+                </span>
+              </label>
+              <button
+                className="btn-primary"
+                disabled={!termsChecked}
+                onClick={() => setHasAcceptedTerms(true)}
+              >
+                Enter Site
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main>
         <AnimatePresence mode="wait">
