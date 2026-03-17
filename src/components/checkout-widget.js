@@ -135,10 +135,11 @@ class CustomCheckoutWidget extends HTMLElement {
 
             // Setup form submission
             this.setupFormListeners();
+        const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
+        termsCheckbox.addEventListener('change', () => this.updateSubmitButtonState());
 
-            // Enable button once elements are ready
-            const submitBtn = this.shadowRoot.getElementById('submit-btn');
-            if (submitBtn) submitBtn.disabled = false;
+            // Initial button state check
+            this.updateSubmitButtonState();
 
         } catch (error) {
             console.error('Checkout initialization error:', error);
@@ -151,7 +152,8 @@ class CustomCheckoutWidget extends HTMLElement {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            if (!this.stripe || !this.elements) return;
+            const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
+            if (!this.stripe || !this.elements || !termsCheckbox.checked) return;
             this.setLoading(true);
 
             // Confirm the payment using Stripe Elements
@@ -175,19 +177,34 @@ class CustomCheckoutWidget extends HTMLElement {
 
     setLoading(isLoading) {
         this.isLoading = isLoading;
-        const submitBtn = this.shadowRoot.getElementById('submit-btn');
+        this.updateSubmitButtonState();
+        
         const spinner = this.shadowRoot.getElementById('spinner');
         const buttonText = this.shadowRoot.getElementById('button-text');
 
         if (isLoading) {
-            submitBtn.disabled = true;
             spinner.classList.remove('hidden');
             buttonText.textContent = 'Processing...';
         } else {
-            submitBtn.disabled = false;
             spinner.classList.add('hidden');
             buttonText.textContent = 'Pay Now';
         }
+    }
+
+    updateSubmitButtonState() {
+        const submitBtn = this.shadowRoot.getElementById('submit-btn');
+        const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
+        
+        // Button is only enabled if:
+        // 1. We're not currently loading/processing
+        // 2. Stripe Elements are initialized (this.elements is not null)
+        // 3. The terms checkbox is checked
+        const isReady = !this.isLoading && this.elements !== null && termsCheckbox.checked;
+        
+        if (submitBtn) {
+            submitBtn.disabled = !isReady;
+        }
+    }
     }
 
     showError(message) {
@@ -355,6 +372,34 @@ class CustomCheckoutWidget extends HTMLElement {
                     gap: 6px;
                     margin-top: 16px;
                 }
+
+                .terms-container {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 10px;
+                    padding: 4px 0;
+                    cursor: pointer;
+                    user-select: none;
+                }
+
+                .terms-container input {
+                    width: 18px;
+                    height: 18px;
+                    margin-top: 2px;
+                    cursor: pointer;
+                    accent-color: var(--checkout-primary-color);
+                }
+
+                .terms-text {
+                    font-size: 14px;
+                    line-height: 1.4;
+                    color: #4b5563;
+                }
+
+                .terms-text a {
+                    color: var(--checkout-primary-color);
+                    text-decoration: underline;
+                }
             </style>
 
             <div class="checkout-container">
@@ -365,6 +410,14 @@ class CustomCheckoutWidget extends HTMLElement {
                     </div>
                     
                     <div id="error-message"></div>
+
+                    <label class="terms-container">
+                        <input type="checkbox" id="terms-checkbox">
+                        <span class="terms-text">
+                            I agree to the <a href="/terms" target="_blank">Terms and Conditions</a> and 
+                            <a href="/privacy" target="_blank">Privacy Policy</a>.
+                        </span>
+                    </label>
                     
                     <button id="submit-btn" type="submit" disabled>
                         <div id="spinner" class="spinner hidden"></div>
@@ -389,3 +442,5 @@ class CustomCheckoutWidget extends HTMLElement {
 
 // Register the custom element
 customElements.define('custom-checkout-widget', CustomCheckoutWidget);
+
+
