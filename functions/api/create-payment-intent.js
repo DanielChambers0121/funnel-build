@@ -28,7 +28,8 @@ export async function onRequestPost(context) {
 
         // Create a PaymentIntent with the order amount and currency
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: order.price, // Already in pence/cents from the widget
+            amount: order.price,
+            automatic_payment_methods: { enabled: true }, // Already in pence/cents from the widget
             currency: order.currency || 'gbp',
             receipt_email: customer.email,
             metadata: {

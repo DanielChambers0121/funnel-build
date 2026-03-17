@@ -110,6 +110,10 @@ class CustomCheckoutWidget extends HTMLElement {
             // Setup form submission
             this.setupFormListeners();
 
+            // Enable button once elements are ready
+            const submitBtn = this.shadowRoot.getElementById('submit-btn');
+            if (submitBtn) submitBtn.disabled = false;
+
         } catch (error) {
             console.error('Checkout initialization error:', error);
             this.showError(error.message);
@@ -336,7 +340,7 @@ class CustomCheckoutWidget extends HTMLElement {
                     
                     <div id="error-message"></div>
                     
-                    <button id="submit-btn" type="submit">
+                    <button id="submit-btn" type="submit" disabled>
                         <div id="spinner" class="spinner hidden"></div>
                         <span id="button-text">Pay Now</span>
                     </button>
