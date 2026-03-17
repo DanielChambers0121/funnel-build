@@ -180,7 +180,7 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
                         <custom-checkout-widget
                             ref={widgetRef}
                             backend-url="/api"
-                            stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_YOUR_STRIPE_PUBLIC_KEY_HERE'}
+                            stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY}
                             amount={selectedTier.price * 100}
                             customer-name={customerData.name}
                             customer-email={customerData.email}

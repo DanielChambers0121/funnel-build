@@ -25,7 +25,7 @@ export default function ExamplePortal({ itemPrice = 99, productName = "Digital P
                 <custom-checkout-widget
                     ref={widgetRef}
                     backend-url="http://127.0.0.1:3000"
-                    stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_YOUR_STRIPE_PUBLIC_KEY_HERE'}
+                    stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY}
                     amount={itemPrice * 100}
                     customer-name={customerData.name}
                     customer-email={customerData.email}
