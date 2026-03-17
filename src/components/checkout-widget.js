@@ -99,29 +99,53 @@ class CustomCheckoutWidget extends HTMLElement {
                 }
             };
 
+            console.log('Initializing Stripe Elements...');
             this.elements = this.stripe.elements({ clientSecret: this.clientSecret, appearance });
+            
+            // Create the payment element
             const paymentElement = this.elements.create('payment', { layout: 'tabs' });
 
             // 4. Mount the Payment Element into the shadow DOM container
             const paymentContainer = this.shadowRoot.getElementById('payment-element');
-            paymentContainer.innerHTML = '';
-            paymentElement.mount(paymentContainer);
+            
+            // Set a timeout to catch cases where Stripe hangs in skeleton state
+            const loadTimeout = setTimeout(() => {
+                if (paymentContainer.querySelector('.skeleton')) {
+                    console.error('Stripe load timeout reached');
+                    this.showError('Payment fields are taking longer than expected to load. Please refresh the page if this persists.');
+                }
+            }, 10000);
 
             paymentElement.on('ready', () => {
-                console.log('Stripe Element Ready');
+                console.log('Stripe Element Ready Event Fired');
+                clearTimeout(loadTimeout);
                 const skeleton = this.shadowRoot.querySelector('.skeleton');
                 if (skeleton) skeleton.remove();
                 paymentContainer.style.minHeight = 'auto';
+                this.updateSubmitButtonState();
+            });
+
+            paymentElement.on('change', (event) => {
+                if (event.error) {
+                    this.showError(event.error.message);
+                } else {
+                    const errorContainer = this.shadowRoot.getElementById('error-message');
+                    errorContainer.style.display = 'none';
+                }
             });
 
             paymentElement.on('loaderror', (event) => {
+                clearTimeout(loadTimeout);
                 console.error('Stripe Load Error:', event.error);
-                let userMessage = 'Failed to load payment fields.';
-                if (event.error.type === 'invalid_request_error') {
-                    userMessage = 'Stripe configuration error. Please ensure your domain is authorized and account is active.';
-                }
-                this.showError(userMessage);
+                // We show the Stripe error message directly to the user
+                this.showError(event.error.message || 'Failed to load payment fields.');
             });
+
+            // Use a micro-task to ensure container is ready for mounting
+            setTimeout(() => {
+                console.log('Mounting Payment Element');
+                paymentElement.mount(paymentContainer);
+            }, 0);
 
             // Setup form submission
             this.setupFormListeners();
@@ -250,10 +274,9 @@ class CustomCheckoutWidget extends HTMLElement {
                 /* Stripe Element Container */
                 #payment-element {
                     min-height: 200px; /* Prevent layout shift */
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                    display: block; /* Stripe recommends block for iframe reliability */
                     border-radius: 4px;
+                    overflow: visible;
                 }
 
                 .skeleton {
@@ -425,7 +448,7 @@ class CustomCheckoutWidget extends HTMLElement {
                 </form>
 
                 <div id="success-message">
-                    <div class="success-icon">?</div>
+                    <div class="success-icon">✓</div>
                     <h3>Payment Successful!</h3>
                     <p>Thank you for your purchase. Your order has been confirmed.</p>
                 </div>
