@@ -109,6 +109,22 @@ class CustomCheckoutWidget extends HTMLElement {
 
             paymentElement.on('ready', () => {
                 console.log('Stripe Element Ready');
+                const skeleton = this.shadowRoot.querySelector('.skeleton');
+                if (skeleton) skeleton.remove();
+                paymentContainer.style.minHeight = 'auto';
+            });
+
+            paymentElement.on('loaderror', (event) => {
+                console.error('Stripe Load Error:', event.error);
+                let userMessage = 'Failed to load payment fields.';
+                if (event.error.type === 'invalid_request_error') {
+                    userMessage = 'Stripe configuration error. Please ensure your domain is authorized and account is active.';
+                }
+                this.showError(userMessage);
+            });
+
+            paymentElement.on('ready', () => {
+                console.log('Stripe Element Ready');
                 this.shadowRoot.getElementById('payment-element').style.minHeight = 'auto';
             });
 
