@@ -107,6 +107,16 @@ class CustomCheckoutWidget extends HTMLElement {
             paymentContainer.innerHTML = '';
             paymentElement.mount(paymentContainer);
 
+            paymentElement.on('ready', () => {
+                console.log('Stripe Element Ready');
+                this.shadowRoot.getElementById('payment-element').style.minHeight = 'auto';
+            });
+
+            paymentElement.on('loaderror', (event) => {
+                console.error('Stripe Load Error:', event.error);
+                this.showError('Failed to load payment fields. Check your Stripe Dashboard settings.');
+            });
+
             // Setup form submission
             this.setupFormListeners();
 
