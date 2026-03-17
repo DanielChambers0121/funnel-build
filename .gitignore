@@ -30,3 +30,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local Netlify folder
+.netlify
+
+# Cloudflare local env vars (equivalent to .env.local for wrangler)
+.dev.vars
