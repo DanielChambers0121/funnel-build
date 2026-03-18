@@ -9,7 +9,7 @@ const TIERS = [
     {
         id: 'audit',
         name: "Funnel Audit",
-        price: 99,
+        price: 250,
         description: "A comprehensive teardown of your current funnel with a recorded video analysis.",
         features: ["Video Teardown", "Actionable PDF Report", "15-Min Strategy Call"],
         popular: false
