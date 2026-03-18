@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ShieldCheck, Lock } from 'lucide-react';
 import './PaymentPortal.css';
-import './checkout-widget.js'; // Import our new framework-agnostic web component
+import './checkout-widget.js'; 
 import CustomerInfoForm from './CustomerInfoForm';
 
 const TIERS = [
@@ -32,33 +32,29 @@ const TIERS = [
     }
 ];
 
-// CheckoutForm logic decoupled into custom-checkout-widget web component
-
 export default function PaymentPortal({ revenueTier, onSuccess }) {
-    // Variable 3: The Recommendation (Based on Revenue)
-    let defaultTier = TIERS[1]; // Default to Quick-Start
+    let defaultTier = TIERS[1]; 
     let recommendedTierId = null;
 
     if (revenueTier === "£0-£5k") {
-        defaultTier = TIERS[1]; // Build
+        defaultTier = TIERS[1]; 
         recommendedTierId = 'build';
     } else if (revenueTier === "£5k-£20k") {
-        defaultTier = TIERS[2]; // DFY
+        defaultTier = TIERS[2]; 
         recommendedTierId = 'dfy';
     } else if (revenueTier === "£20k+") {
-        defaultTier = TIERS[0]; // Audit
+        defaultTier = TIERS[0]; 
         recommendedTierId = 'audit';
     }
 
     const [selectedTier, setSelectedTier] = useState(defaultTier);
-    const [customerData, setCustomerData] = useState(null); // Tracks step 1 lead capture
+    const [customerData, setCustomerData] = useState(null); 
     const widgetRef = useRef(null);
 
     useEffect(() => {
         const widget = widgetRef.current;
         if (!widget) return;
 
-        // Listen to the custom event emitted by our decoupled web component
         const handleSuccess = () => onSuccess();
         widget.addEventListener('payment-success', handleSuccess);
 
@@ -148,7 +144,6 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
                     ))}
                 </motion.div>
 
-                {/* Checkout Form UI */}
                 <motion.div
                     className="checkout-container glass-panel"
                     initial={{ opacity: 0, y: 40 }}
@@ -180,7 +175,7 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
                         <custom-checkout-widget
                             ref={widgetRef}
                             backend-url="/api"
-                            stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY}
+                            stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_live_51P2c6mRvP7ToxK6Vp2w3V4x5y6z7a8b9"} 
                             amount={selectedTier.price * 100}
                             customer-name={customerData.name}
                             customer-email={customerData.email}
