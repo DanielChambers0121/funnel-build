@@ -1,10 +1,7 @@
 /*
  * Embedded Checkout Wrapper - Frontend Web Component
  * 
- * A framework-agnostic web component that provides a secure, fully embedded checkout experience.
- * It uses CSS variables for easy theming to match any sales funnel design.
- * 
- * Version: 1.0.4+sync-final (2026-03-18T00:35:00Z)
+ * Version: 1.0.6+shadow-dom-fix (2026-03-18T01:05:00Z)
  */
 
 class CustomCheckoutWidget extends HTMLElement {
@@ -19,7 +16,6 @@ class CustomCheckoutWidget extends HTMLElement {
 
     connectedCallback() {
         this.render();
-        console.log("Widget connected. Initializing Stripe checkout...");
         this.loadStripeScript().then(() => {
             this.initializeCheckout();
         }).catch(err => {
@@ -43,11 +39,9 @@ class CustomCheckoutWidget extends HTMLElement {
         const publishableKey = this.getAttribute('stripe-key');
         const backendUrl = this.getAttribute('backend-url');
         const amount = parseInt(this.getAttribute('amount') || '5000', 10);
-        const customerEmail = this.getAttribute('customer-email') || '';
-        const customerName = this.getAttribute('customer-name') || '';
 
         if (!publishableKey || !backendUrl) {
-            this.showError('Missing stripe-key or backend-url.');
+            this.showError('Configuration error: missing keys.');
             return;
         }
 
@@ -58,8 +52,11 @@ class CustomCheckoutWidget extends HTMLElement {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     order: { items: [{ id: 'core_product' }], price: amount, currency: 'gbp' },
-                    customer: { name: customerName, email: customerEmail },
-                    metadata: { funnel_source: window.location.hostname, affiliate_id: this.getAttribute('affiliate-id') || 'none' }
+                    customer: { 
+                        name: this.getAttribute('customer-name') || '', 
+                        email: this.getAttribute('customer-email') || '' 
+                    },
+                    metadata: { funnel_source: window.location.hostname }
                 })
             });
 
@@ -67,54 +64,38 @@ class CustomCheckoutWidget extends HTMLElement {
             if (!response.ok || !data.clientSecret) throw new Error(data.error || 'Failed to initialize payment.');
 
             this.clientSecret = data.clientSecret;
-            const appearance = { theme: 'stripe', variables: { colorPrimary: '#2563eb', fontFamily: 'system-ui, sans-serif' } };
+            const appearance = { theme: 'stripe', variables: { colorPrimary: '#2563eb' } };
             this.elements = this.stripe.elements({ clientSecret: this.clientSecret, appearance });
-            const paymentElement = this.elements.create('payment', { layout: 'tabs' });
-            const paymentContainer = this.shadowRoot.getElementById('payment-element');
             
-            const loadTimeout = setTimeout(() => {
-                const skeleton = this.shadowRoot.querySelector('.skeleton');
-                if (skeleton) {
-                    console.error('Stripe load timeout');
-                    this.showError('Payment fields are taking longer than expected to load.');
-                }
-            }, 10000);
+            const paymentElement = this.elements.create('payment', { layout: 'tabs' });
+            const container = this.shadowRoot.getElementById('payment-element');
 
             paymentElement.on('ready', () => {
-                console.log('Stripe Element Ready Event Fired');
-                clearTimeout(loadTimeout);
                 const skeleton = this.shadowRoot.querySelector('.skeleton');
                 if (skeleton) skeleton.remove();
-                if (paymentContainer) paymentContainer.style.minHeight = 'auto';
                 this.updateSubmitButtonState();
             });
 
             paymentElement.on('change', (event) => {
                 if (event.error) this.showError(event.error.message);
                 else {
-                    const errorContainer = this.shadowRoot.getElementById('error-message');
-                    if (errorContainer) errorContainer.style.display = 'none';
+                    const err = this.shadowRoot.getElementById('error-message');
+                    if (err) err.style.display = 'none';
                 }
             });
 
-            paymentElement.on('loaderror', (event) => {
-                clearTimeout(loadTimeout);
-                console.error('Stripe Load Error:', event.error);
-                this.showError(event.error.message || 'Failed to load.');
+            requestAnimationFrame(() => {
+                if (container) {
+                    paymentElement.mount(container);
+                }
             });
 
-            setTimeout(() => {
-                console.log('Mounting Payment Element');
-                paymentElement.mount(paymentContainer);
-            }, 0);
-
             this.setupFormListeners();
-            const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
-            if (termsCheckbox) termsCheckbox.addEventListener('change', () => this.updateSubmitButtonState());
-            this.updateSubmitButtonState();
+            const terms = this.shadowRoot.getElementById('terms-checkbox');
+            if (terms) terms.addEventListener('change', () => this.updateSubmitButtonState());
 
         } catch (error) {
-            console.error('Initialization error:', error);
+            console.error('Stripe Init Error:', error);
             this.showError(error.message);
         }
     }
@@ -124,10 +105,15 @@ class CustomCheckoutWidget extends HTMLElement {
         if (!form) return;
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
-            if (!this.stripe || !this.elements || (termsCheckbox && !termsCheckbox.checked)) return;
+            const terms = this.shadowRoot.getElementById('terms-checkbox');
+            if (!this.stripe || !this.elements || (terms && !terms.checked)) return;
+            
             this.setLoading(true);
-            const { error } = await this.stripe.confirmPayment({ elements: this.elements, redirect: 'if_required' });
+            const { error } = await this.stripe.confirmPayment({ 
+                elements: this.elements, 
+                redirect: 'if_required' 
+            });
+
             if (error) {
                 this.showError(error.message);
                 this.setLoading(false);
@@ -141,88 +127,74 @@ class CustomCheckoutWidget extends HTMLElement {
     setLoading(isLoading) {
         this.isLoading = isLoading;
         this.updateSubmitButtonState();
+        const btn = this.shadowRoot.getElementById('button-text');
         const spinner = this.shadowRoot.getElementById('spinner');
-        const buttonText = this.shadowRoot.getElementById('button-text');
-        if (isLoading) {
-            if (spinner) spinner.classList.remove('hidden');
-            if (buttonText) buttonText.textContent = 'Processing...';
-        } else {
-            if (spinner) spinner.classList.add('hidden');
-            if (buttonText) buttonText.textContent = 'Pay Now';
+        if (btn) btn.textContent = isLoading ? 'Processing...' : 'Pay Now';
+        if (spinner) {
+            if (isLoading) spinner.classList.remove('hidden');
+            else spinner.classList.add('hidden');
         }
     }
 
     updateSubmitButtonState() {
-        const submitBtn = this.shadowRoot.getElementById('submit-btn');
-        const termsCheckbox = this.shadowRoot.getElementById('terms-checkbox');
-        const isReady = !this.isLoading && this.elements !== null && (termsCheckbox ? termsCheckbox.checked : true);
-        if (submitBtn) submitBtn.disabled = !isReady;
+        const btn = this.shadowRoot.getElementById('submit-btn');
+        const terms = this.shadowRoot.getElementById('terms-checkbox');
+        const ready = !this.isLoading && this.elements && (terms ? terms.checked : true);
+        if (btn) btn.disabled = !ready;
     }
 
-    showError(message) {
-        const errorContainer = this.shadowRoot.getElementById('error-message');
-        if (errorContainer) {
-            errorContainer.textContent = message;
-            errorContainer.style.display = 'block';
+    showError(msg) {
+        const err = this.shadowRoot.getElementById('error-message');
+        if (err) {
+            err.textContent = msg;
+            err.style.display = 'block';
         }
     }
 
     showSuccess() {
         const form = this.shadowRoot.getElementById('payment-form');
-        const successMessage = this.shadowRoot.getElementById('success-message');
+        const success = this.shadowRoot.getElementById('success-message');
         if (form) form.style.display = 'none';
-        if (successMessage) successMessage.style.display = 'flex';
+        if (success) success.style.display = 'flex';
     }
 
     render() {
         this.shadowRoot.innerHTML = `
             <style>
-                :host {
-                    --checkout-primary-color: #2563eb;
-                    --checkout-bg: #ffffff;
-                    --checkout-border-radius: 8px;
-                    --checkout-error-color: #ef4444;
-                    --checkout-success-color: #10b981;
-                    display: block; font-family: system-ui, sans-serif; width: 100%;
-                }
-                .checkout-container { background-color: var(--checkout-bg); padding: 24px; border-radius: var(--checkout-border-radius); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-                #payment-form { display: flex; flex-direction: column; gap: 24px; }
-                #payment-element { min-height: 200px; display: block; border-radius: 4px; overflow: visible; }
-                .skeleton { width: 100%; height: 200px; background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: loading-skeleton 1.5s infinite; border-radius: 6px; }
-                @keyframes loading-skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-                button { background-color: var(--checkout-primary-color); color: #fff; border: none; border-radius: 6px; padding: 14px 16px; font-size: 16px; font-weight: 600; cursor: pointer; transition: opacity 0.2s ease; display: flex; justify-content: center; align-items: center; gap: 12px; }
-                button:hover:not(:disabled) { opacity: 0.9; }
+                :host { display: block; font-family: system-ui, sans-serif; }
+                .container { background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                #payment-form { display: flex; flex-direction: column; gap: 20px; }
+                #payment-element { min-height: 200px; border-radius: 4px; }
+                .skeleton { width: 100%; height: 200px; background: #f3f4f6; animation: pulse 1.5s infinite; border-radius: 6px; }
+                @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+                button { background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 14px; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; }
                 button:disabled { opacity: 0.6; cursor: not-allowed; }
-                .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; }
+                .spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
                 @keyframes spin { to { transform: rotate(360deg); } }
-                .hidden { display: none !important; }
-                #error-message { color: var(--checkout-error-color); font-size: 14px; background-color: #fef2f2; border: 1px solid #fecaca; padding: 12px; border-radius: 6px; display: none; }
-                #success-message { display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 20px; }
-                .success-icon { width: 64px; height: 64px; background-color: #ecfdf5; color: var(--checkout-success-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 20px; }
-                .terms-container { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
-                .terms-container input { width: 18px; height: 18px; accent-color: var(--checkout-primary-color); }
-                .terms-text { font-size: 14px; color: #4b5563; }
-                .terms-text a { color: var(--checkout-primary-color); text-decoration: underline; }
-                .secured-by { text-align: center; font-size: 12px; color: #6b7280; margin-top: 12px; }
+                .hidden { display: none; }
+                #error-message { color: #ef4444; background: #fef2f2; padding: 12px; border-radius: 6px; display: none; font-size: 14px; }
+                #success-message { display: none; flex-direction: column; align-items: center; padding: 40px; }
+                .terms-container { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 14px; color: #4b5563; }
+                .terms-container input { width: 18px; height: 18px; margin: 0; }
             </style>
-            <div class="checkout-container">
+            <div class="container">
                 <form id="payment-form">
                     <div id="payment-element"><div class="skeleton"></div></div>
                     <div id="error-message"></div>
                     <label class="terms-container">
                         <input type="checkbox" id="terms-checkbox">
-                        <span class="terms-text">I agree to the <a href="/terms" target="_blank">Terms</a> and <a href="/privacy" target="_blank">Privacy</a>.</span>
+                        <span>I agree to the <a href="/terms" target="_blank">Terms</a>.</span>
                     </label>
                     <button id="submit-btn" type="submit" disabled>
                         <div id="spinner" class="spinner hidden"></div>
                         <span id="button-text">Pay Now</span>
                     </button>
-                    <div class="secured-by">Secured by Stripe</div>
+                    <div style="text-align:center;font-size:12px;color:#6b7280;margin-top:10px;">Secured by Stripe</div>
                 </form>
                 <div id="success-message">
-                    <div class="success-icon">✓</div>
+                    <div style="width:48px;height:48px;background:#ecfdf5;color:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;">✓</div>
                     <h3>Success!</h3>
-                    <p>Thank you for your purchase.</p>
+                    <p>Order confirmed.</p>
                 </div>
             </div>
         `;
