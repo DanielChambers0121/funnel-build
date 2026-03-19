@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ShieldCheck, Lock } from 'lucide-react';
 import './PaymentPortal.css';
-import './checkout-widget.js'; 
+import './checkout-widget.js'; // Import our new framework-agnostic web component
 import CustomerInfoForm from './CustomerInfoForm';
 
 const TIERS = [
@@ -61,7 +61,7 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
         return () => {
             widget.removeEventListener('payment-success', handleSuccess);
         };
-    }, [onSuccess, selectedTier]);
+    }, [onSuccess, selectedTier, customerData]);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -180,6 +180,12 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
                             customer-name={customerData.name}
                             customer-email={customerData.email}
                             affiliate-id="funnel-builder">
+                            {/* Proyect this into the shadow DOM via slot, keeping Stripe correctly in the Light DOM */}
+                            <div slot="stripe-element" id="stripe-element-container" style={{ minHeight: '300px', width: '100%' }}>
+                                <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', color: '#9ca3af', borderRadius: '8px', border: '1px dashed #d1d5db' }}>
+                                    Initializing Secure Checkout...
+                                </div>
+                            </div>
                         </custom-checkout-widget>
                     )}
                 </motion.div>
