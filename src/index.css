@@ -257,3 +257,72 @@ button {
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Footer */
+.app-footer {
+  margin-top: auto;
+  padding: 60px 0 20px;
+  background: linear-gradient(to top, rgba(13, 13, 13, 0.9) 0%, transparent 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.footer-section h4 {
+  color: #fff;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.social-links {
+  display: flex;
+  gap: 16px;
+}
+
+.social-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.social-links a:hover {
+  background: var(--accent-color);
+  color: #000;
+  transform: translateY(-2px);
+}
+
+.footer-bottom {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
+}
