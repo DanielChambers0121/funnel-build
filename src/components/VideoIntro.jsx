@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Play, SkipForward, ArrowRight } from 'lucide-react';
+import { Play, SkipForward, ArrowRight, Volume2, VolumeX } from 'lucide-react';
 import './VideoIntro.css';
 
 export default function VideoIntro({ onComplete }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
     console.log("VideoIntro mounted");
@@ -16,20 +17,41 @@ export default function VideoIntro({ onComplete }) {
       setShowSkip(true);
     }, 2000);
     
-    // Check if autoplay worked
-    const checkAutoplay = setTimeout(() => {
-      if (videoRef.current && videoRef.current.paused) {
-        setIsPlaying(false);
-      } else {
-        setIsPlaying(true);
+    // Try to play with audio after a short delay to give component time to mount
+    const playVideo = setTimeout(() => {
+      if (videoRef.current) {
+        // Attempt to play with audio first
+        videoRef.current.muted = false;
+        videoRef.current.play().then(() => {
+          console.log("Video playing with audio");
+          setIsPlaying(true);
+          setIsMuted(false);
+        }).catch(error => {
+          console.log("Autoplay with audio blocked, falling back to muted:", error);
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            videoRef.current.play().then(() => {
+              setIsPlaying(true);
+            }).catch(e => console.error("Muted autoplay also failed:", e));
+          }
+        });
       }
-    }, 500);
+    }, 100);
 
     return () => {
       clearTimeout(timer);
       clearTimeout(checkAutoplay);
+      clearTimeout(playVideo);
     };
   }, []);
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(videoRef.current.muted);
+    }
+  };
 
   const handlePlay = () => {
     console.log("Handle Play clicked");
@@ -62,8 +84,11 @@ export default function VideoIntro({ onComplete }) {
             onPlay={() => console.log("Video started playing")}
             playsInline
             autoPlay
-            muted
           />
+          
+          <div className="video-audio-toggle" onClick={toggleMute}>
+            {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+          </div>
           
           {!isPlaying && (
             <div className="video-overlay" onClick={handlePlay}>
