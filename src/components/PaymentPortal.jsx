@@ -9,7 +9,7 @@ const TIERS = [
     {
         id: 'audit',
         name: "Funnel Audit",
-        price: 99,
+        price: 250,
         description: "A comprehensive teardown of your current funnel with a recorded video analysis.",
         features: ["Video Teardown", "Actionable PDF Report", "15-Min Strategy Call"],
         popular: false
@@ -32,40 +32,36 @@ const TIERS = [
     }
 ];
 
-// CheckoutForm logic decoupled into custom-checkout-widget web component
-
 export default function PaymentPortal({ revenueTier, onSuccess }) {
-    // Variable 3: The Recommendation (Based on Revenue)
-    let defaultTier = TIERS[1]; // Default to Quick-Start
+    let defaultTier = TIERS[1]; 
     let recommendedTierId = null;
 
     if (revenueTier === "£0-£5k") {
-        defaultTier = TIERS[1]; // Build
+        defaultTier = TIERS[1]; 
         recommendedTierId = 'build';
     } else if (revenueTier === "£5k-£20k") {
-        defaultTier = TIERS[2]; // DFY
+        defaultTier = TIERS[2]; 
         recommendedTierId = 'dfy';
     } else if (revenueTier === "£20k+") {
-        defaultTier = TIERS[0]; // Audit
+        defaultTier = TIERS[0]; 
         recommendedTierId = 'audit';
     }
 
     const [selectedTier, setSelectedTier] = useState(defaultTier);
-    const [customerData, setCustomerData] = useState(null); // Tracks step 1 lead capture
+    const [customerData, setCustomerData] = useState(null); 
     const widgetRef = useRef(null);
 
     useEffect(() => {
         const widget = widgetRef.current;
         if (!widget) return;
 
-        // Listen to the custom event emitted by our decoupled web component
         const handleSuccess = () => onSuccess();
         widget.addEventListener('payment-success', handleSuccess);
 
         return () => {
             widget.removeEventListener('payment-success', handleSuccess);
         };
-    }, [onSuccess, selectedTier]);
+    }, [onSuccess, selectedTier, customerData]);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -148,7 +144,6 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
                     ))}
                 </motion.div>
 
-                {/* Checkout Form UI */}
                 <motion.div
                     className="checkout-container glass-panel"
                     initial={{ opacity: 0, y: 40 }}
@@ -180,11 +175,17 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
                         <custom-checkout-widget
                             ref={widgetRef}
                             backend-url="/api"
-                            stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_YOUR_STRIPE_PUBLIC_KEY_HERE'}
+                            stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_live_51P2c6mRvP7ToxK6Vp2w3V4x5y6z7a8b9"} 
                             amount={selectedTier.price * 100}
                             customer-name={customerData.name}
                             customer-email={customerData.email}
                             affiliate-id="funnel-builder">
+                            {/* Proyect this into the shadow DOM via slot, keeping Stripe correctly in the Light DOM */}
+                            <div slot="stripe-element" id="stripe-element-container" style={{ minHeight: '300px', width: '100%' }}>
+                                <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f3f4f6', color: '#9ca3af', borderRadius: '8px', border: '1px dashed #d1d5db' }}>
+                                    Initializing Secure Checkout...
+                                </div>
+                            </div>
                         </custom-checkout-widget>
                     )}
                 </motion.div>

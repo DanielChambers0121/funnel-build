@@ -1,44 +1,37 @@
 /*
- * Embedded Checkout Wrapper - Frontend Web Component
+ * Embedded Checkout Wrapper - Light DOM Projection Fix
  * 
- * A framework-agnostic web component that provides a secure, fully embedded checkout experience.
- * It uses CSS variables for easy theming to match any sales funnel design.
+ * Version: 1.1.0 (2026-03-18T03:30:00Z)
  */
 
 class CustomCheckoutWidget extends HTMLElement {
     constructor() {
         super();
-        // Attach shadow DOM for styling encapsulation
         this.attachShadow({ mode: 'open' });
-
-        // Internal state
         this.stripe = null;
         this.elements = null;
+        this.paymentElement = null;
         this.clientSecret = null;
         this.isLoading = false;
+        this.isMounted = false;
     }
 
     connectedCallback() {
-        // Render initial structure
         this.render();
-
-        console.log("Widget connected. Initializing Stripe checkout...");
-
-        // Load Stripe.js then initialize checkout
         this.loadStripeScript().then(() => {
-            this.initializeCheckout();
+            return this.initializeCheckout();
         }).catch(err => {
-            this.showError('Failed to load payment system. Please try again later.');
-            console.error(err);
+            console.error('[Stripe] Script load failed:', err);
+            this.showError('Payment system failed to load.');
         });
     }
 
     async loadStripeScript() {
         if (window.Stripe) return;
-
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = 'https://js.stripe.com/v3/';
+            script.async = true;
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
@@ -48,34 +41,27 @@ class CustomCheckoutWidget extends HTMLElement {
     async initializeCheckout() {
         const publishableKey = this.getAttribute('stripe-key');
         const backendUrl = this.getAttribute('backend-url');
-        const amount = parseInt(this.getAttribute('amount') || '5000', 10);
-        const customerEmail = this.getAttribute('customer-email') || '';
-        const customerName = this.getAttribute('customer-name') || '';
+        const amount = parseInt(this.getAttribute('amount') || '25000', 10);
 
         if (!publishableKey || !backendUrl) {
-            this.showError('Checkout widget configuration error: missing stripe-key or backend-url.');
+            this.showError('Configuration error: missing Stripe keys.');
             return;
         }
 
         try {
-            // 1. Initialize Stripe
+            console.log('[Stripe Fixed] Fetching intent for amount:', amount);
             this.stripe = window.Stripe(publishableKey);
-
-            // 2. Fetch the PaymentIntent client secret from the Netlify serverless function
+            
             const response = await fetch(`${backendUrl}/create-payment-intent`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    order: {
-                        items: [{ id: 'core_product' }],
-                        price: amount,
-                        currency: 'gbp'
+                    order: { items: [{ id: 'core_product' }], price: amount, currency: 'gbp' },
+                    customer: { 
+                        name: this.getAttribute('customer-name') || '', 
+                        email: this.getAttribute('customer-email') || '' 
                     },
-                    customer: {
-                        name: customerName,
-                        email: customerEmail
-                    },
-                    metadata: {
+                    metadata: { 
                         funnel_source: window.location.hostname,
                         affiliate_id: this.getAttribute('affiliate-id') || 'none'
                     }
@@ -83,60 +69,79 @@ class CustomCheckoutWidget extends HTMLElement {
             });
 
             const data = await response.json();
-
-            if (!response.ok || !data.clientSecret) {
-                throw new Error(data.error || 'Failed to initialize payment.');
-            }
+            if (!response.ok || !data.clientSecret) throw new Error(data.error || 'Failed to create payment session.');
 
             this.clientSecret = data.clientSecret;
+            console.log('[Stripe Fixed] Client Secret received.');
 
-            // 3. Initialize Stripe Elements
-            const appearance = {
+            const appearance = { 
                 theme: 'stripe',
-                variables: {
-                    colorPrimary: '#2563eb',
-                    fontFamily: 'system-ui, sans-serif',
+                variables: { 
+                    colorPrimary: '#00d2ff',
+                    colorBackground: '#ffffff',
+                    colorText: '#1f2937',
+                    borderRadius: '8px'
                 }
             };
-
+            
             this.elements = this.stripe.elements({ clientSecret: this.clientSecret, appearance });
-            const paymentElement = this.elements.create('payment', { layout: 'tabs' });
+            this.paymentElement = this.elements.create('payment', { layout: 'tabs' });
+            
+            // KEY FIX: Mount into the Light DOM slot element instead of Shadow DOM element
+            // Since this custom element hosts the slot, it can query its light DOM children.
+            const container = this.querySelector('#stripe-element-container');
+            if (!container) {
+                console.error('[Stripe Fixed] Light DOM container not found!');
+                throw new Error('Payment container is missing.');
+            }
 
-            // 4. Mount the Payment Element into the shadow DOM container
-            const paymentContainer = this.shadowRoot.getElementById('payment-element');
-            paymentContainer.innerHTML = '';
-            paymentElement.mount(paymentContainer);
+            this.paymentElement.on('ready', () => {
+                console.log('[Stripe Fixed] Payment Element READY.');
+                container.style.height = 'auto'; // allow the form to expand naturally
+                this.updateSubmitButtonState();
+            });
 
-            // Setup form submission
+            this.paymentElement.on('change', (event) => {
+                if (event.error) this.showError(event.error.message);
+                else {
+                    const err = this.shadowRoot.getElementById('error-message');
+                    if (err) err.style.display = 'none';
+                }
+            });
+
+            console.log('[Stripe Fixed] Mounting to Light DOM element...');
+            this.paymentElement.mount(container);
+            this.isMounted = true;
+
             this.setupFormListeners();
+            const terms = this.shadowRoot.getElementById('terms-checkbox');
+            if (terms) terms.addEventListener('change', () => this.updateSubmitButtonState());
 
         } catch (error) {
-            console.error('Checkout initialization error:', error);
+            console.error('[Stripe Fixed] Initialization Error:', error);
             this.showError(error.message);
         }
     }
 
     setupFormListeners() {
         const form = this.shadowRoot.getElementById('payment-form');
+        if (!form) return;
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            if (!this.stripe || !this.elements) return;
+            const terms = this.shadowRoot.getElementById('terms-checkbox');
+            if (!this.stripe || !this.elements || (terms && !terms.checked)) return;
+            
             this.setLoading(true);
-
-            // Confirm the payment using Stripe Elements
-            const { error } = await this.stripe.confirmPayment({
-                elements: this.elements,
-                // redirect: 'if_required' keeps the user on the same page for card payments
-                redirect: 'if_required',
+            const { error } = await this.stripe.confirmPayment({ 
+                elements: this.elements, 
+                confirmParams: { return_url: window.location.href },
+                redirect: 'if_required' 
             });
 
             if (error) {
-                // Show inline error (e.g., card declined, insufficient funds)
                 this.showError(error.message);
                 this.setLoading(false);
             } else {
-                // Payment succeeded
                 this.showSuccess();
                 this.dispatchEvent(new CustomEvent('payment-success', { bubbles: true, composed: true }));
             }
@@ -145,217 +150,134 @@ class CustomCheckoutWidget extends HTMLElement {
 
     setLoading(isLoading) {
         this.isLoading = isLoading;
-        const submitBtn = this.shadowRoot.getElementById('submit-btn');
+        this.updateSubmitButtonState();
+        const btn = this.shadowRoot.getElementById('button-text');
         const spinner = this.shadowRoot.getElementById('spinner');
-        const buttonText = this.shadowRoot.getElementById('button-text');
-
-        if (isLoading) {
-            submitBtn.disabled = true;
-            spinner.classList.remove('hidden');
-            buttonText.textContent = 'Processing...';
-        } else {
-            submitBtn.disabled = false;
-            spinner.classList.add('hidden');
-            buttonText.textContent = 'Pay Now';
+        if (btn) btn.textContent = isLoading ? 'Processing...' : 'Pay Now';
+        if (spinner) {
+            if (isLoading) spinner.classList.remove('hidden');
+            else spinner.classList.add('hidden');
         }
     }
 
-    showError(message) {
-        const errorContainer = this.shadowRoot.getElementById('error-message');
-        errorContainer.textContent = message;
-        errorContainer.style.display = 'block';
+    updateSubmitButtonState() {
+        const btn = this.shadowRoot.getElementById('submit-btn');
+        const terms = this.shadowRoot.getElementById('terms-checkbox');
+        const ready = !this.isLoading && this.isMounted && (terms ? terms.checked : true);
+        if (btn) btn.disabled = !ready;
+    }
+
+    showError(msg) {
+        const err = this.shadowRoot.getElementById('error-message');
+        if (err) {
+            err.textContent = msg;
+            err.style.display = 'block';
+        }
     }
 
     showSuccess() {
         const form = this.shadowRoot.getElementById('payment-form');
-        const successMessage = this.shadowRoot.getElementById('success-message');
-
-        form.style.display = 'none';
-        successMessage.style.display = 'flex';
+        const success = this.shadowRoot.getElementById('success-message');
+        if (form) form.style.display = 'none';
+        if (success) success.style.display = 'flex';
     }
 
     render() {
-        // Minimalist, high-end base styles that can be overridden via CSS custom properties
         this.shadowRoot.innerHTML = `
             <style>
-                :host {
-                    /* Public CSS Variables for Theming */
-                    --checkout-primary-color: #2563eb;
-                    --checkout-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-                    --checkout-bg: #ffffff;
-                    --checkout-border-radius: 8px;
-                    --checkout-box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                    --checkout-button-text-color: #ffffff;
-                    --checkout-error-color: #ef4444;
-                    --checkout-success-color: #10b981;
-                    
-                    display: block;
-                    font-family: var(--checkout-font);
+                :host { 
+                    display: block; 
                     width: 100%;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
                 }
-
-                .checkout-container {
-                    background-color: var(--checkout-bg);
-                    padding: 24px;
-                    border-radius: var(--checkout-border-radius);
-                    box-shadow: var(--checkout-box-shadow);
+                .container { 
+                    background: #fff; 
+                    padding: 32px; 
+                    border-radius: 12px; 
+                    box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+                    border: 1px solid #e5e7eb;
+                    color: #1f2937;
                 }
-
-                #payment-form {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 24px;
+                #payment-form { display: flex; flex-direction: column; gap: 24px; }
+                
+                #submit-btn { 
+                    background: #00d2ff; 
+                    color: #000; 
+                    border: none; 
+                    border-radius: 100px; 
+                    padding: 18px; 
+                    font-weight: 700; 
+                    font-size: 18px; 
+                    cursor: pointer; 
+                    display: flex; 
+                    justify-content: center; 
+                    align-items: center; 
+                    gap: 12px; 
+                    transition: all 0.2s;
+                    box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
                 }
-
-                /* Stripe Element Container */
-                #payment-element {
-                    min-height: 200px; /* Prevent layout shift */
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 4px;
+                #submit-btn:hover:not(:disabled) { 
+                    background: #00b4db; 
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(0, 210, 255, 0.4);
                 }
-
-                .skeleton {
-                    width: 100%;
-                    height: 200px;
-                    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-                    background-size: 200% 100%;
-                    animation: loading-skeleton 1.5s infinite;
-                    border-radius: 6px;
+                #submit-btn:disabled { 
+                    opacity: 0.5; 
+                    cursor: not-allowed; 
+                    transform: none;
+                    box-shadow: none;
                 }
-
-                @keyframes loading-skeleton {
-                    0% { background-position: 200% 0; }
-                    100% { background-position: -200% 0; }
+                .spinner { width: 22px; height: 22px; border: 3px solid rgba(0,0,0,0.1); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
+                @keyframes spin { to { transform: rotate(360deg); } }
+                .hidden { display: none; }
+                
+                #error-message { color: #dc2626; background: #fef2f2; padding: 14px; border-radius: 8px; border: 1px solid #fecaca; display: none; font-size: 14px; }
+                #success-message { display: none; flex-direction: column; align-items: center; padding: 48px 24px; text-align: center; }
+                
+                .terms-container { 
+                    display: flex; 
+                    align-items: flex-start; 
+                    gap: 12px; 
+                    cursor: pointer; 
+                    font-size: 14px; 
+                    color: #6b7280; 
+                    line-height: 1.5; 
                 }
-
-                button {
-                    background-color: var(--checkout-primary-color);
-                    color: var(--checkout-button-text-color);
-                    font-family: var(--checkout-font);
-                    border: none;
-                    border-radius: 6px;
-                    padding: 14px 16px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: opacity 0.2s ease, transform 0.1s ease;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 12px;
-                    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+                .terms-container input { 
+                    width: 18px; 
+                    height: 18px; 
+                    margin-top: 2px;
+                    accent-color: #00d2ff; 
+                    flex-shrink: 0; 
                 }
-
-                button:hover:not(:disabled) {
-                    opacity: 0.9;
-                }
-
-                button:active:not(:disabled) {
-                    transform: scale(0.98);
-                }
-
-                button:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
-                }
-
-                /* Spinner styles */
-                .spinner {
-                    width: 18px;
-                    height: 18px;
-                    border: 3px solid rgba(255,255,255,0.3);
-                    border-radius: 50%;
-                    border-top-color: #fff;
-                    animation: spin 1s ease-in-out infinite;
-                }
-
-                @keyframes spin {
-                    to { transform: rotate(360deg); }
-                }
-
-                .hidden {
-                    display: none !important;
-                }
-
-                #error-message {
-                    color: var(--checkout-error-color);
-                    font-size: 14px;
-                    background-color: #fef2f2;
-                    border: 1px solid #fecaca;
-                    padding: 12px;
-                    border-radius: 6px;
-                    display: none;
-                }
-
-                #success-message {
-                    display: none;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                    padding: 40px 20px;
-                    color: #111827;
-                }
-
-                .success-icon {
-                    width: 64px;
-                    height: 64px;
-                    background-color: #ecfdf5;
-                    color: var(--checkout-success-color);
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 32px;
-                    margin-bottom: 20px;
-                }
-
-                h3 { margin: 0 0 12px 0; font-size: 24px; font-weight: 600; color: #111827; }
-                p { margin: 0; color: #4b5563; line-height: 1.5; font-size: 16px; }
-
-                .secured-by {
-                    text-align: center;
-                    font-size: 13px;
-                    color: #6b7280;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 6px;
-                    margin-top: 16px;
-                }
+                .terms-container a { color: #00d2ff; text-decoration: none; font-weight: 600; }
+                .terms-container a:hover { text-decoration: underline; }
+                .secured-by { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: #9ca3af; margin-top: 12px; font-weight: 500; }
             </style>
-
-            <div class="checkout-container">
+            <div class="container">
                 <form id="payment-form">
-                    <!-- Stripe injects the Payment Element here -->
-                    <div id="payment-element">
-                        <div class="skeleton"></div>
-                    </div>
-                    
+                    <!-- The slot projects the light DOM Stripe container here -->
+                    <slot name="stripe-element"></slot>
                     <div id="error-message"></div>
-                    
-                    <button id="submit-btn" type="submit">
+                    <label class="terms-container">
+                        <input type="checkbox" id="terms-checkbox">
+                        <span>I confirm that I have read and agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a>.</span>
+                    </label>
+                    <button id="submit-btn" type="submit" disabled>
                         <div id="spinner" class="spinner hidden"></div>
                         <span id="button-text">Pay Now</span>
                     </button>
-
-                    <div class="secured-by">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        Secured by Stripe
-                    </div>
+                    <div class="secured-by">🔒 Secured by Stripe</div>
                 </form>
-
                 <div id="success-message">
-                    <div class="success-icon">✓</div>
-                    <h3>Payment Successful!</h3>
-                    <p>Thank you for your purchase. Your order has been confirmed.</p>
+                    <div style="width:64px;height:64px;background:#ecfdf5;color:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:20px;">✓</div>
+                    <h3 style="margin:0 0 8px 0;color:#111827;">Payment Successful!</h3>
+                    <p style="margin:0;color:#4b5563;">Thank you for your order. A confirmation email has been sent.</p>
                 </div>
             </div>
         `;
     }
 }
-
-// Register the custom element
-customElements.define('custom-checkout-widget', CustomCheckoutWidget);
+if (!customElements.get('custom-checkout-widget')) {
+    customElements.define('custom-checkout-widget', CustomCheckoutWidget);
+}

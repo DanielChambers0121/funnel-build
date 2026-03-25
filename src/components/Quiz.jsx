@@ -37,8 +37,15 @@ export default function Quiz({ onQuizComplete }) {
     const [currentStep, setCurrentStep] = useState(0);
     const [answers, setAnswers] = useState({});
     const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const handleOptionSelect = (value) => {
+        if (isProcessing) return;
+        
+        // Safety check for bounds
+        if (currentStep >= QUIZ_QUESTIONS.length) return;
+
+        setIsProcessing(true);
         // Save answer
         const newAnswers = { ...answers, [QUIZ_QUESTIONS[currentStep].id]: value };
         setAnswers(newAnswers);
@@ -48,6 +55,7 @@ export default function Quiz({ onQuizComplete }) {
             if (currentStep < QUIZ_QUESTIONS.length - 1) {
                 setDirection(1);
                 setCurrentStep(prev => prev + 1);
+                setIsProcessing(false);
             } else {
                 // Quiz finished
                 onQuizComplete(newAnswers);
@@ -56,6 +64,7 @@ export default function Quiz({ onQuizComplete }) {
     };
 
     const handleBack = () => {
+        if (isProcessing) return;
         if (currentStep > 0) {
             setDirection(-1);
             setCurrentStep(prev => prev - 1);
@@ -65,10 +74,10 @@ export default function Quiz({ onQuizComplete }) {
     const progressPercentage = ((currentStep + 1) / QUIZ_QUESTIONS.length) * 100;
     const currentQuestion = QUIZ_QUESTIONS[currentStep];
 
-    // Animation variants
+    // Animation variants - Fixed with percentages for stability
     const slideVariants = {
         enter: (dir) => ({
-            x: dir > 0 ? 1000 : -1000,
+            x: dir > 0 ? '100%' : '-100%',
             opacity: 0,
             scale: 0.95
         }),
@@ -84,7 +93,7 @@ export default function Quiz({ onQuizComplete }) {
         },
         exit: (dir) => ({
             zIndex: 0,
-            x: dir < 0 ? 1000 : -1000,
+            x: dir < 0 ? '100%' : '-100%',
             opacity: 0,
             scale: 0.95,
             transition: {
@@ -96,7 +105,6 @@ export default function Quiz({ onQuizComplete }) {
 
     return (
         <section className="quiz-section">
-            {/* Added a split-layout container for consistency and premium feel */}
             <div className="quiz-split-layout">
                 <motion.div
                     className="quiz-image-pane"
@@ -122,7 +130,7 @@ export default function Quiz({ onQuizComplete }) {
                             <div className="quiz-meta">
                                 <span>Step {currentStep + 1} of {QUIZ_QUESTIONS.length}</span>
                                 {currentStep > 0 && (
-                                    <button className="btn-back" onClick={handleBack}>
+                                    <button className="btn-back" onClick={handleBack} disabled={isProcessing}>
                                         Previous Question
                                     </button>
                                 )}
@@ -152,11 +160,12 @@ export default function Quiz({ onQuizComplete }) {
                                                     key={option.value}
                                                     className={`option-card glass-panel ${isSelected ? 'selected' : ''}`}
                                                     onClick={() => handleOptionSelect(option.value)}
-                                                    whileHover={{ scale: isSelected ? 1 : 1.02, y: -2 }}
-                                                    whileTap={{ scale: 0.98 }}
+                                                    whileHover={{ scale: (isSelected || isProcessing) ? 1 : 1.02, y: isProcessing ? 0 : -2 }}
+                                                    whileTap={{ scale: isProcessing ? 1 : 0.98 }}
                                                     initial={{ opacity: 0, y: 20 }}
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ delay: index * 0.1 }}
+                                                    disabled={isProcessing}
                                                 >
                                                     <div className="option-content">
                                                         <div className="option-icon-wrapper">

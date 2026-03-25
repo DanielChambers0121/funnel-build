@@ -2,13 +2,9 @@
     min-height: 100vh;
     display: flex;
     padding-top: 80px;
-    /* Offset for navbar */
-    display: flex;
     background-color: var(--bg-color);
-    /* Match overall funnel context */
 }
 
-/* Premium Split Layout for Quiz to match Hero Parallax aesthetic */
 .quiz-split-layout {
     display: flex;
     width: 100%;
@@ -18,7 +14,6 @@
 .quiz-image-pane {
     flex: 1;
     display: none;
-    /* Hidden on mobile */
     background-image: url('/quiz-bg.png');
     background-size: cover;
     background-position: center;
@@ -42,7 +37,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 0;
+    padding: 40px 20px;
 }
 
 .quiz-container {
@@ -56,7 +51,6 @@
     }
 }
 
-/* Header & Progress */
 .quiz-header {
     padding: 24px;
     margin-bottom: 40px;
@@ -92,40 +86,43 @@
     color: var(--text-muted);
     font-size: 0.9rem;
     transition: color 0.2s;
+    background: transparent;
 }
 
-.btn-back:hover {
+.btn-back:hover:not(:disabled) {
     color: var(--text-main);
 }
 
-/* Quiz Card Area */
+.btn-back:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 .quiz-card-wrapper {
     position: relative;
     width: 100%;
-    /* Fixed height approach to prevent layout jumps, adjust as needed */
     min-height: 450px;
+    overflow-x: hidden;
 }
 
 .quiz-card {
     width: 100%;
-    position: absolute;
-    /* absolute for sliding transitions */
-    top: 0;
-    left: 0;
+    position: relative;
 }
 
 .question-text {
-    font-size: 2.2rem;
+    font-size: clamp(1.8rem, 4vw, 2.2rem);
     margin-bottom: 32px;
     text-align: center;
     color: var(--text-main);
+    line-height: 1.2;
 }
 
-/* Options Grid */
 .options-grid {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    width: 100%;
 }
 
 .option-card {
@@ -134,9 +131,10 @@
     padding: 24px;
     transition: all 0.2s ease;
     border: 1px solid var(--panel-border);
+    display: block;
 }
 
-.option-card:hover {
+.option-card:hover:not(:disabled) {
     border-color: rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.05);
 }
@@ -169,10 +167,6 @@
     border: 2px solid var(--text-muted);
 }
 
-.option-card:hover .option-circle {
-    border-color: var(--text-main);
-}
-
 .selected-icon {
     color: var(--accent-color);
     width: 24px;
@@ -183,6 +177,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+    flex: 1;
 }
 
 .option-label {
@@ -198,21 +193,29 @@
     margin: 0;
 }
 
-/* Responsive */
 @media (max-width: 600px) {
-    .question-text {
-        font-size: 1.8rem;
+    .quiz-content-pane {
+        padding: 20px 0;
     }
-
-    .option-label {
-        font-size: 1.1rem;
+    
+    .question-text {
+        font-size: 1.6rem;
+        margin-bottom: 24px;
     }
 
     .option-card {
         padding: 16px;
     }
 
+    .option-label {
+        font-size: 1.1rem;
+    }
+
     .quiz-card-wrapper {
-        min-height: 500px;
+        min-height: 480px;
+    }
+    
+    .option-content {
+        gap: 12px;
     }
 }

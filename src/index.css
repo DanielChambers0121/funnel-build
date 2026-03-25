@@ -165,6 +165,82 @@ button {
   background: linear-gradient(to bottom, rgba(13, 13, 13, 0.9) 0%, transparent 100%);
 }
 
+/* Terms & Conditions Gate */
+.terms-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.terms-modal {
+  max-width: 860px;
+  width: 100%;
+  max-height: 80vh;
+  padding: 32px 32px 24px;
+  text-align: left;
+}
+
+.terms-modal h2 {
+  margin-bottom: 8px;
+}
+
+.terms-updated {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+
+.terms-content {
+  max-height: 48vh;
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.terms-content h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.terms-content p {
+  margin-bottom: 8px;
+}
+
+.terms-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.terms-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 520px;
+}
+
+.terms-checkbox input[type="checkbox"] {
+  margin-top: 3px;
+}
+
+.terms-actions .btn-primary[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -180,4 +256,73 @@ button {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Footer */
+.app-footer {
+  margin-top: auto;
+  padding: 60px 0 20px;
+  background: linear-gradient(to top, rgba(13, 13, 13, 0.9) 0%, transparent 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.footer-section h4 {
+  color: #fff;
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.social-links {
+  display: flex;
+  gap: 16px;
+}
+
+.social-links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.social-links a:hover {
+  background: var(--accent-color);
+  color: #000;
+  transform: translateY(-2px);
+}
+
+.footer-bottom {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
 }
