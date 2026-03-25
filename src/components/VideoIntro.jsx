@@ -41,7 +41,6 @@ export default function VideoIntro({ onComplete }) {
 
     return () => {
       clearTimeout(timer);
-      clearTimeout(checkAutoplay);
       clearTimeout(playVideo);
     };
   }, []);
