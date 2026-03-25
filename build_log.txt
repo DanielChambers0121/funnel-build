@@ -1,0 +1,15 @@
+﻿
+> funnel-builder@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mÔ£ô[39m 2177 modules transformed.
+rendering chunks...
+[plugin vite:singlefile] 
+
+[plugin vite:singlefile] Inlining: index-B8_uqKcH.js
+[plugin vite:singlefile] Inlining: style-FGc7o3O7.css
+computing gzip size...
+[2mdist/[22m[32mindex.html  [39m[1m[2m546.49 kB[22m[1m[22m[2m Ôöé gzip: 164.65 kB[22m
+[32mÔ£ô built in 5.54s[39m

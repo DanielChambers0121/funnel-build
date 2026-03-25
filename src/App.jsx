@@ -5,12 +5,20 @@ import Hero from './components/Hero';
 import Quiz from './components/Quiz';
 import ResultsPage from './components/ResultsPage';
 import PaymentPortal from './components/PaymentPortal';
+import VideoIntro from './components/VideoIntro';
 
 function App() {
-  const [funnelStep, setFunnelStep] = useState('HERO'); // HERO, QUIZ, RESULTS, PAYMENT, THANK_YOU
+  const [funnelStep, setFunnelStep] = useState('HERO'); // HERO, VIDEO_INTRO, QUIZ, RESULTS, PAYMENT, THANK_YOU
   const [quizAnswers, setQuizAnswers] = useState(null);
 
+  const startVideoIntro = () => {
+    console.log("Transitioning to VIDEO_INTRO");
+    setFunnelStep('VIDEO_INTRO');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const startQuiz = () => {
+    console.log("Transitioning to QUIZ");
     setFunnelStep('QUIZ');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -49,10 +57,22 @@ function App() {
               key="hero"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Hero onStartQuiz={startVideoIntro} />
+            </motion.div>
+          )}
+
+          {funnelStep === 'VIDEO_INTRO' && (
+            <motion.div
+              key="video-intro"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -50 }}
               transition={{ duration: 0.5 }}
             >
-              <Hero onStartQuiz={startQuiz} />
+              <VideoIntro onComplete={startQuiz} />
             </motion.div>
           )}
 
