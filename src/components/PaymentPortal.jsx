@@ -175,8 +175,8 @@ export default function PaymentPortal({ revenueTier, onSuccess }) {
                         <custom-checkout-widget
                             ref={widgetRef}
                             backend-url="/api"
-                            stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY || "pk_live_51P2c6mRvP7ToxK6Vp2w3V4x5y6z7a8b9"} 
-                            amount={selectedTier.price * 100}
+                            stripe-key={import.meta.env.VITE_STRIPE_PUBLIC_KEY} 
+                            tier-id={selectedTier.id}
                             customer-name={customerData.name}
                             customer-email={customerData.email}
                             affiliate-id="funnel-builder">

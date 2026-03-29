@@ -41,22 +41,22 @@ class CustomCheckoutWidget extends HTMLElement {
     async initializeCheckout() {
         const publishableKey = this.getAttribute('stripe-key');
         const backendUrl = this.getAttribute('backend-url');
-        const amount = parseInt(this.getAttribute('amount') || '25000', 10);
+        const tierId = this.getAttribute('tier-id');
 
-        if (!publishableKey || !backendUrl) {
-            this.showError('Configuration error: missing Stripe keys.');
+        if (!publishableKey || !backendUrl || !tierId) {
+            this.showError('Configuration error: missing Stripe keys or tier ID.');
             return;
         }
 
         try {
-            console.log('[Stripe Fixed] Fetching intent for amount:', amount);
+            console.log('[Stripe Fixed] Fetching intent for tier:', tierId);
             this.stripe = window.Stripe(publishableKey);
             
             const response = await fetch(`${backendUrl}/create-payment-intent`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    order: { items: [{ id: 'core_product' }], price: amount, currency: 'gbp' },
+                    tierId,
                     customer: { 
                         name: this.getAttribute('customer-name') || '', 
                         email: this.getAttribute('customer-email') || '' 

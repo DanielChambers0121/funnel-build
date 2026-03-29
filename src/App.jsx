@@ -190,7 +190,7 @@ function App() {
               </div>
               <div className="contact-item">
                 <Mail size={16} />
-                <span>7hurtz89@gmail.com</span>
+                <span>Danieldchambers@hotmail.co.uk</span>
               </div>
             </div>
           </div>
