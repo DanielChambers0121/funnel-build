@@ -1,4 +1,5 @@
 import { useState } from 'react';
+// Force-rebuild trigger (Syncing Stripe Keys)
 import { AnimatePresence, motion } from 'framer-motion';
 import { Hexagon, ShieldCheck, Mail, Phone, Instagram } from 'lucide-react';
 import Hero from './components/Hero';
